@@ -1,4 +1,3 @@
-
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -8,27 +7,35 @@ import empyrical
 
 def spearman_corr(x):
     if any(x.isna()):
-        return(np.nan)
+        return np.nan
     else:
-        rank = [i for i in range(1, len(x)+1)]
+        rank = [i for i in range(1, len(x) + 1)]
         sc, _ = stats.spearmanr(x, rank)
-        return(sc)
+        return sc
 
 
 def proportional_corr(x):
     if any(x.isna()):
-        return(np.nan)
+        return np.nan
     else:
-        rank = [i for i in range(1, len(x)+1)]
+        rank = [i for i in range(1, len(x) + 1)]
         sc, _ = stats.spearmanr(x, rank)
-        return(sc*(x[-1]**(np.sign(sc))))
+        return sc * (x[-1] ** (np.sign(sc)))
 
 
 ##################################################################
 # General Utilities for collecting stock returns etc
 ##################################################################
 
-def collecting_stock_data_avg(tickers, start='2017-07-19', end='2022-06-01', value_name='Adj Close', output_name="Close", inputpath='sp500/stock_dataframes/'):
+
+def collecting_stock_data_avg(
+    tickers,
+    start="2017-07-19",
+    end="2022-06-01",
+    value_name="Adj Close",
+    output_name="Close",
+    inputpath="sp500/stock_dataframes/",
+):
     """collecting_stock_percentages: returns a dataframe containing
     information on closes
 
@@ -57,24 +64,15 @@ def collecting_stock_data_avg(tickers, start='2017-07-19', end='2022-06-01', val
 
     collected_stocks_df = pd.DataFrame(dtype=np.float64)
     for t in tickers:
-        stock_df = (
-
-            pd.read_csv(
-                inputpath+t+'.csv',
-                index_col='Date')
-            .loc[start:end]
-
-        )
-        df = pd.DataFrame(
-            {f'{t} {output_name}': stock_df[f'{value_name}']}
-        )
-        collected_stocks_df = pd.concat(
-            [collected_stocks_df, df],
-            axis=1)
-    return(collected_stocks_df)
+        stock_df = pd.read_csv(inputpath + t + ".csv", index_col="Date").loc[start:end]
+        df = pd.DataFrame({f"{t} {output_name}": stock_df[f"{value_name}"]})
+        collected_stocks_df = pd.concat([collected_stocks_df, df], axis=1)
+    return collected_stocks_df
 
 
-def collecting_stock_percentages(tickers, start='2017-07-19', end='2022-06-01', inputpath='sp500/stock_dataframes/'):
+def collecting_stock_percentages(
+    tickers, start="2017-07-19", end="2022-06-01", inputpath="sp500/stock_dataframes/"
+):
     """collecting_stock_percentages: function that returns a dataframe containing
     information on % return
 
@@ -104,37 +102,13 @@ def collecting_stock_percentages(tickers, start='2017-07-19', end='2022-06-01', 
                 contains the columns t % Return for each stock t, indexed by date"""
     collected_stocks_df = pd.DataFrame(dtype=np.float64)
     for t in tickers:
-        stock_df = (
-
-            pd.read_csv(
-                inputpath+t+'.csv',
-                index_col='Date')
-            .loc[start:end]
-
-        )
+        stock_df = pd.read_csv(inputpath + t + ".csv", index_col="Date").loc[start:end]
         df2 = (
-
-            (
-                (
-                    stock_df
-                    .loc[:, ["Adj Close"]]
-                    - stock_df
-                    .loc[:, ["Adj Close"]]
-                    .shift(1)
-                )
-                /
-                (
-                    stock_df
-                    .loc[:, ["Adj Close"]]
-                    .shift(1)
-                )
-            ).set_axis(
-                {t+' % Return'},
-                axis=1
-            )
-        )
+            (stock_df.loc[:, ["Adj Close"]] - stock_df.loc[:, ["Adj Close"]].shift(1))
+            / (stock_df.loc[:, ["Adj Close"]].shift(1))
+        ).set_axis({t + " % Return"}, axis=1)
         collected_stocks_df = pd.concat([collected_stocks_df, df2], axis=1)
-    return(collected_stocks_df)
+    return collected_stocks_df
 
 
 ##################################################################
@@ -142,7 +116,7 @@ def collecting_stock_percentages(tickers, start='2017-07-19', end='2022-06-01', 
 ##################################################################
 
 
-def find_bins(stock_factor_df, start='2017-07-19', end='2022-06-01'):
+def find_bins(stock_factor_df, start="2017-07-19", end="2022-06-01"):
     """find bins:   returns a dataframe containing
     the stock bins associated to a dataframe of factors
 
@@ -174,45 +148,50 @@ def find_bins(stock_factor_df, start='2017-07-19', end='2022-06-01'):
     index_li = list(stock_factor_df.index.values)
     bins_df = pd.DataFrame(dtype=np.float64)
     for i in index_li:
-        df = stock_factor_df.loc[i]
-        df = df.dropna()
-        df = (
+        df = stock_factor_df.loc[i].sort_values().reset_index()
+        columnlist = df["index"]
+        # if we don't have any factors the above will be all na, and
+        # so sorting doesn't work
+        if df.isnull().all().any():
+            columnlist[:] = pd.NA
 
-            stock_factor_df
-            .loc[i]
-            .sort_values()
-            .reset_index()
-
-        )
-        columnlist = df['index']
-        bins_df = pd.concat([
-            bins_df,
-            pd.DataFrame(
-                {
-                    'buy bins':
-                        [
-                            columnlist[0:len(columnlist)//3-1]
-                            .values
+        bins_df = pd.concat(
+            [
+                bins_df,
+                pd.DataFrame(
+                    {
+                        "buy bins": [columnlist[0 : len(columnlist) // 3 - 1].values],
+                        "ignore bins": [
+                            columnlist[
+                                len(columnlist) // 3 : len(columnlist)
+                                - len(columnlist) // 3
+                                - 1
+                            ].values
                         ],
-                    'ignore bins':
-                        [
-                            columnlist[len(columnlist)//3:
-                                       len(columnlist)-len(columnlist)//3-1]
-                            .values
+                        "sell bins": [
+                            columnlist[
+                                len(columnlist)
+                                - len(columnlist) // 3 : len(columnlist)
+                                - 1
+                            ].values
                         ],
-                    'sell bins':
-                        [
-                            columnlist[len(columnlist) -
-                                       len(columnlist)//3:len(columnlist)-1]
-                            .values]
-                }, index=[i])]
+                    },
+                    index=[i],
+                ),
+            ]
         )
-    bins_df.index = pd.to_datetime(
-        stock_factor_df.index.values, format='%Y-%m-%d')
-    return(bins_df)
+    bins_df.index = pd.to_datetime(stock_factor_df.index.values, format="%Y-%m-%d")
+    return bins_df
 
 
-def bin_position_calc(tickers, bin_signals, collected_stocks_df, start='2017-07-19', end='2022-06-01'):
+def bin_position_calc(
+    tickers,
+    bin_signals,
+    collected_stocks_df,
+    short=False,
+    start="2017-07-19",
+    end="2022-06-01",
+):
     """bin_position_calc: returns a dataframe containing
     the stock positions associated to a collection of bins
 
@@ -247,84 +226,82 @@ def bin_position_calc(tickers, bin_signals, collected_stocks_df, start='2017-07-
                 positions_df.loc[date,stock Position] = 1 if stock is in column 'buy bin'
                 on time_jump*date//time_jump and np.nan otherwise"""
 
-    bin_signals.index = pd.to_datetime(
-        bin_signals.index.values, format='%Y-%m-%d')
-    bin_signals = bin_signals.loc[start:end]
+    bin_signals.index = pd.to_datetime(bin_signals.index.values, format="%Y-%m-%d")
     collected_stocks_df.index = pd.to_datetime(
-        collected_stocks_df.index.values, format='%Y-%m-%d')
+        collected_stocks_df.index.values, format="%Y-%m-%d"
+    )
     collected_stocks_df = collected_stocks_df.loc[bin_signals.index.values]
     positions_df = pd.DataFrame(dtype=np.float64)
     for t in tickers:
-        df = pd.DataFrame(
-            np.nan, columns=[t+' Position'], index=bin_signals.index)
-        (
-
-            df
-            .loc[
-                :, t+' Position'
-            ]
-
-        ) = (
-
-            bin_signals
-            ['buy bins']
-            .map(lambda x: (t in x)*1)
-
+        df = pd.DataFrame(0, columns=[t + " Position"], index=bin_signals.index)
+        # shift below by 1 as we would be holding this position the day after
+        (df.loc[:, t + " Position"]) = (
+            bin_signals["buy bins"].map(lambda x: (t in x) * 1).shift(1, fill_value=0)
         )
+        if short:
+            (df.loc[:, t + " Position"]) = df.loc[:, t + " Position"] + bin_signals[
+                "sell bins"
+            ].map(lambda x: -1 * (t in x)).shift(1, fill_value=0)
         positions_df = pd.concat([positions_df, df], axis=1)
-    positions_df.replace(0, np.nan, inplace=True)
     positions_df = pd.concat([collected_stocks_df, positions_df], axis=1)
-    return(positions_df)
+    positions_df = positions_df.loc[start:end]
+    return positions_df
 
 
-def factors_to_pos(stock_factor_df, collected_stocks_df, tickers, start='2018-01-01', end='2022-06-01'):
+def factors_to_pos(
+    stock_factor_df,
+    collected_stocks_df,
+    tickers,
+    start="2018-01-01",
+    end="2022-06-01",
+    short=False,
+):
     """factors_to_pos: returns a dataframe containing
-        the positions of each stock
+    the positions of each stock
 
-        inputs
-        ------
-                positions_df: a pd.DataFrame
-                    indexed by date
-                    contains columns t Position ,t % Return for t a stock ticker
+    inputs
+    ------
+            positions_df: a pd.DataFrame
+                indexed by date
+                contains columns t Position ,t % Return for t a stock ticker
 
-                    positions_df.loc[date,stock Position] = 1 if stock is in column 'buy bin'
-                    in collected_stocks_df.loc[time_jump * (date//time_jump)] (i.e.
-                    on the date we reassess our position), and np.nan otherwise
+                positions_df.loc[date,stock Position] = 1 if stock is in column 'buy bin'
+                in collected_stocks_df.loc[time_jump * (date//time_jump)] (i.e.
+                on the date we reassess our position), and np.nan otherwise
 
-                tickers:  list of strings
-                    contains the tickers for the stocks
+            tickers:  list of strings
+                contains the tickers for the stocks
 
-                start: string, optional
-                    start date of strategy
-                    default 2018-01-01
+            start: string, optional
+                start date of strategy
+                default 2018-01-01
 
-                end: string, optional
-                    end date of strategy
-                    default 2022-06-01
-        returns:
-                positions_df: pd.DataFrame
-                    indexed by date
-                    contains columns t Position ,t % Return for t a stock ticker.
+            end: string, optional
+                end date of strategy
+                default 2022-06-01
+    returns:
+            positions_df: pd.DataFrame
+                indexed by date
+                contains columns t Position ,t % Return for t a stock ticker.
 
-                    positions_df.loc[date,stock Position] = 1 if stock is in column 'buy bin'
-                    on time_jump*date//time_jump and np.nan otherwise"""
-    bins = find_bins(stock_factor_df=stock_factor_df, start=start, end=end)
-    bins.index = pd.to_datetime(
-        bins.index.values,
-        format="%Y-%m-%d"
+                positions_df.loc[date,stock Position] = 1 if stock is in column 'buy bin'
+                on time_jump*date//time_jump and np.nan otherwise"""
+    bins = find_bins(
+        stock_factor_df=stock_factor_df, start="2010-01-01", end="2022-06-01"
     )
+    bins.index = pd.to_datetime(bins.index.values, format="%Y-%m-%d")
     collected_stocks_df.index = pd.to_datetime(
-        collected_stocks_df.index.values,
-        format="%Y-%m-%d"
+        collected_stocks_df.index.values, format="%Y-%m-%d"
     )
     pos_df = bin_position_calc(
         tickers=tickers,
         bin_signals=bins,
         collected_stocks_df=collected_stocks_df,
         start=start,
-        end=end
+        end=end,
+        short=short,
     )
-    return(pos_df)
+    return pos_df
 
 
 ##################################################################
@@ -332,7 +309,9 @@ def factors_to_pos(stock_factor_df, collected_stocks_df, tickers, start='2018-01
 ##################################################################
 
 
-def pos_to_return(positions_df, tickers, start='2018-01-01', end='2022-06-01',  hold_len=5):
+def pos_to_return(
+    positions_df, tickers, start="2018-01-01", end="2022-06-01", hold_len=5
+):
     """pos_to_return: returns a dataframe containing
         the returns on a naive stock portfolio
 
@@ -360,42 +339,56 @@ def pos_to_return(positions_df, tickers, start='2018-01-01', end='2022-06-01',  
                 the number of days for which we hold our positions
                 default 5
 
-    returns:         
+    returns:
             strategy_df: pd.DataFrame
                 indexed by date
                 returns of strategy"""
 
     positions_df = positions_df.loc[start:end]
     strategy_return_df = pd.DataFrame()
+    df_n_held_stocks = pd.DataFrame(
+        0, index=positions_df.index.values, columns=["n_held_stocks"]
+    )
     for t in tickers:
         stock_pos_df = pd.DataFrame(
-
-            np.nan,
-            index=positions_df.index.values,
-            columns=[t]
-
+            np.nan, index=positions_df.index.values, columns=[t]
         )
+
         (
-            stock_pos_df
-            .loc[
+            stock_pos_df.loc[
                 stock_pos_df.index.values[
-                    range(0, len(positions_df.index.values)-hold_len+1, hold_len)
-                ], t]
-
-        ) = (
-
-            positions_df
-            .loc[
-                positions_df.index.values[
-                    range(0, len(positions_df.index.values)-hold_len+1, hold_len)
-                ], t+' Position']
-
-        )
+                    range(
+                        0,
+                        len(positions_df.index.values),
+                        hold_len,
+                    )
+                ],
+                t,
+            ]
+        ) = positions_df.loc[
+            positions_df.index.values[
+                range(
+                    0,
+                    len(positions_df.index.values),
+                    hold_len,
+                )
+            ],
+            t + " Position",
+        ]
         if hold_len > 1:
-            stock_pos_df.ffill(inplace=True, limit=hold_len-1)
+            stock_pos_df.ffill(inplace=True, limit=hold_len - 1)
         strategy_return_df = pd.concat(
-            [strategy_return_df, stock_pos_df[t]*positions_df[t+' % Return']], axis=1)
-    strategy_return_df = strategy_return_df.mean(axis=1)
-    strategy_return_df.index.name = 'Date'
-    strategy_return_df.columns = ['portfolio return']
-    return(strategy_return_df)
+            [strategy_return_df, stock_pos_df[t] * positions_df[t + " % Return"]],
+            axis=1,
+        )
+        df_n_held_stocks["n_held_stocks"] = (
+            df_n_held_stocks["n_held_stocks"]
+            + 1 * (stock_pos_df[t] == 1)
+            + 1 * (stock_pos_df[t] == -1)
+        )
+    strategy_return_df = (
+        strategy_return_df.sum(axis=1) / df_n_held_stocks["n_held_stocks"]
+    )
+    strategy_return_df.index.name = "Date"
+    strategy_return_df.columns = ["portfolio return"]
+    return strategy_return_df

@@ -1,0 +1,13 @@
+,params,value
+0,n_estimators,1000.0
+1,learning_rate,0.2608534930747528
+2,num_leaves,1210.0
+3,max_depth,5.0
+4,min_data_in_leaf,350.0
+5,max_bin,133.0
+6,lambda_l1,78.0
+7,lambda_l2,86.0
+8,min_gain_to_split,10.804999368148568
+9,bagging_fraction,0.4
+10,bagging_freq,1.0
+11,feature_fraction,0.75
